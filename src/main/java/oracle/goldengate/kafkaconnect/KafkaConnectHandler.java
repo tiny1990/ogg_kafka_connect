@@ -18,6 +18,7 @@ import oracle.goldengate.format.NgFormattedData;
 
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.source.SourceRecord;
+
 import oracle.goldengate.kafkaconnect.formatter.KafkaConnectFormattedData;
 
 import oracle.goldengate.util.GGException;
@@ -27,16 +28,16 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This is the next generation Kafka Handler for the 12.2 OGGADP Big Data
- * release. This implementation uses the core of the Kafka Connect 
+ * release. This implementation uses the core of the Kafka Connect
  * framework.
  *
  * @author tbcampbe
  */
 public class KafkaConnectHandler extends NgFormattedOutputHandler {
-    private static final Logger logger = LoggerFactory.getLogger(KafkaConnectHandler.class);    
+    private static final Logger logger = LoggerFactory.getLogger(KafkaConnectHandler.class);
     private final GGProperties kafkaProperties;
-    private GGProducer kafkaProd=null;
-    private SourceRecordGenerator createPR=null;
+    private GGProducer kafkaProd = null;
+    private SourceRecordGenerator createPR = null;
     private ConfluentHandlerMetrics handlerMetrics;
 
     /**
@@ -45,9 +46,10 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
     public KafkaConnectHandler() {
         this(TxOpMode.tx);
     }
-    
+
     /**
      * Constructor with mode.
+     *
      * @param m tx for transaction mode, op for operation mode.
      */
     public KafkaConnectHandler(TxOpMode m) {
@@ -55,12 +57,12 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
         kafkaProperties = new GGProperties();
         handlerMetrics = new ConfluentHandlerMetrics();
     }
-  
+
     /**
      * Initialize the Confluent Kafka handler and its producer with the kafka-producer
      * properties.
      *
-     * @param conf The configuration object
+     * @param conf     The configuration object
      * @param metaData The metadata object
      */
     @Override
@@ -68,7 +70,7 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
         super.init(conf, metaData);
         kafkaProperties.loadKafkaProperties();
 
-        if(logger.isInfoEnabled()) {
+        if (logger.isInfoEnabled()) {
             StringBuilder sb = new StringBuilder();
             sb.append(System.lineSeparator());
             sb.append("**** Kafka Handler (Connect Framework) - Configuration Summary ****");
@@ -89,7 +91,7 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
             sb.append("  Contents of Kafka producer configuration file ");
             sb.append(System.lineSeparator());
             kafkaProperties.printKafkaConnectionProps(sb);
-      
+
             sb.append("**** End Kafka Handler (Connect Framework) - Configuration Summary ****");
             sb.append(System.lineSeparator());
             logger.info(sb.toString());
@@ -104,7 +106,7 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
      * Handle the transaction begin event along with any possible formatting
      * that may be required to be done.
      *
-     * @param e The event
+     * @param e  The event
      * @param tx The transaction
      * @return Status.OK for success else failure
      */
@@ -118,7 +120,7 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
      * Handler the new operation received event along with any possible
      * formatting that may be required to be done.
      *
-     * @param e The event
+     * @param e  The event
      * @param tx The transaction object
      * @param op The current operation object
      * @return Status.OK for sucess, else other
@@ -141,14 +143,14 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
             //Increment the op counters
             incrementCounters(opAdapt);
             //Format the data
-            status = formatOp(txAdapt, opAdapt, data); 
+            status = formatOp(txAdapt, opAdapt, data);
 
             if (status == Status.OK) {
                 for (int i = 0; i < data.size(); i++) {
                     Struct record = data.getRecord(i);
                     Struct key = data.getKey(i);
                     status = processData(txAdapt, opAdapt, key, record);
-                    if (status != Status.OK){
+                    if (status != Status.OK) {
                         break;
                     }
                 }
@@ -162,23 +164,23 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
      * Handle the transaction commit event along with any possible formatting
      * that may be required to be done at this time.
      *
-     * @param e The event object
+     * @param e  The event object
      * @param tx The transaction object.
      * @return Status.OK for success, else failure
      */
     @Override
     public Status transactionCommit(DsEvent e, DsTransaction tx) {
         Status status = super.transactionCommit(e, tx);
-        final Tx txAdapt = new Tx(tx, getMetaData(), getConfig()); 
-        if(!isOperationMode()) {
-            for(DsOperation op : tx.getOperations()) {
+        final Tx txAdapt = new Tx(tx, getMetaData(), getConfig());
+        if (!isOperationMode()) {
+            for (DsOperation op : tx.getOperations()) {
                 TableMetaData tMeta = getMetaData().getTableMetaData(op.getTableName());
                 Op opAdapt = new Op(op, tMeta, getConfig());
                 KafkaConnectFormattedData data = (KafkaConnectFormattedData) formatter.createNgFormattedData();
                 //Increment the op counters
                 incrementCounters(opAdapt);
                 //Format the data
-                status = formatOp(txAdapt, opAdapt, data); 
+                status = formatOp(txAdapt, opAdapt, data);
 
                 if (status == Status.OK) {
 
@@ -186,17 +188,17 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
                         Struct record = data.getRecord(i);
                         Struct key = data.getKey(i);
                         status = processData(txAdapt, opAdapt, key, record);
-                        if (status != Status.OK){
+                        if (status != Status.OK) {
                             break;
                         }
                     }
                 }
-                if (status != Status.OK){
+                if (status != Status.OK) {
                     break;
                 }
             }
         }
-        if (status == Status.OK){
+        if (status == Status.OK) {
             //Increment the number of tranactions
             handlerMetrics.incrementNumTxs();
             //Flush Kafka on the transaction commit boundary to ensure write duribility
@@ -204,15 +206,15 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
         }
         return status;
     }
-    
+
     /**
      * Handle the ddlOperation event along with any possible formatting that may
      * be required to send across the ddl statement as a possible message.
      *
-     * @param opType The operation type
+     * @param opType     The operation type
      * @param objectType The object type
      * @param objectName The fully qualified table name
-     * @param ddlText The DDL text
+     * @param ddlText    The DDL text
      * @return Status.OK for success, other for failure
      */
     @Override
@@ -228,7 +230,7 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
      * Kafka producer but not yet "flushed" due to properties along the lines of
      * "batch.size" or "linger.ms".
      *
-     * @param e The event object
+     * @param e  The event object
      * @param tx The transaction object
      * @return Status.OK for success.
      */
@@ -241,7 +243,7 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
      * Handle the metadataChanged events. TODO: Schema topics: Can possibly send
      * avro metadata schemas to a persistent kafka topic.
      *
-     * @param e The event object.
+     * @param e    The event object.
      * @param meta The metadata object
      * @return Status.OK for success
      */
@@ -249,7 +251,7 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
     public Status metaDataChanged(DsEvent e, DsMetaData meta) {
         Status status = super.metaDataChanged(e, meta);
         //Need to clear out cached metadata
-        TableMetaData tMeta = (TableMetaData)e.getEventSource();
+        TableMetaData tMeta = (TableMetaData) e.getEventSource();
         String tableName = tMeta.getTableName().getOriginalName();
         //Need to get this to the formatter.
         return status;
@@ -260,6 +262,7 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
      * the classpath to be loaded.  Configure using the following parameter
      * in the GoldenGate Java Properties file.
      * gg.handler.name.kafkaProducerConfigFile
+     *
      * @param fileName The Kafka producer properties file.
      */
     public void setKafkaProducerConfigFile(String fileName) {
@@ -273,12 +276,13 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
      * Configure using the following parameter in the GoldenGate Java properties
      * file:
      * gg.handler.name.sourceRecordGeneratorClass
-     * @param className The fully qualified class name of the SourceRecordGenerator
-     * implementation class.
+     *
+     * @param className The fully qualified class name of the SourceRecordGenerator implementation
+     *                  class.
      */
     public void setSourceRecordGeneratorClass(String className) {
         kafkaProperties.setSourceRecordGeneratorClass(className);
-    }   
+    }
 
     /**
      * This method is responsible to process and format each operation as it
@@ -286,32 +290,35 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
      * it to the Kafka producer.
      *
      * @param currentTx The current transaction
-     * @param op The current operation
+     * @param op        The current operation
      * @return Status.OK if success
      */
     private Status formatOp(Tx currentTx, Op op, NgFormattedData data) {
         Status status = Status.OK;
         if (logger.isDebugEnabled()) {
             logger.debug("Process operation: table=[" + op.getTableName() + "]"
-                    + ", op pos=" + op.getPosition()
-                    + ", tx pos=" + currentTx.getTranID()
-                    + ", op ts=" + op.getTimestamp());
+                + ", op pos=" + op.getPosition()
+                + ", tx pos=" + currentTx.getTranID()
+                + ", op ts=" + op.getTimestamp());
         }
 
         TableMetaData tMeta = getMetaData().getTableMetaData(op.getTableName());
 
         try {
             formatter.formatOp(currentTx.getTransaction(), op.getOperation(), tMeta, data);
-           
+
         } catch (Exception e) {
             logger.error("Confluent Kafka Handler failed to format and process operation: table=[" + op.getTableName() + "]"
-                    + ", op pos=" + op.getPosition()
-                    + ", tx pos=" + currentTx.getTranID()
-                    + ", op ts=" + op.getTimestamp(), e);
+                + ", op pos=" + op.getPosition()
+                + ", tx pos=" + currentTx.getTranID()
+                + ", op type = " + op.getSqlType()
+                + ", op ts=" + op.getTimestamp(), e);
             throw new GGException("Confluent Kafka Handler failed to format and process operation: table=[" + op.getTableName() + "]"
-                    + ", op pos=" + op.getPosition()
-                    + ", tx pos=" + currentTx.getTranID()
-                    + ", op ts=" + op.getTimestamp(), e);
+                + ", op pos=" + op.getPosition()
+                + ", tx pos=" + currentTx.getTranID()
+                + ", op type = " + op.getSqlType()
+                + ", tMeta = " + tMeta.toString()
+                + ", op ts=" + op.getTimestamp(), e);
         }
         return status;
     }
@@ -319,19 +326,19 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
     /**
      * This method is responsible for creating the Kafka producer record
      * and submitting it to the Kafka producer.
-     * 
-     * @param tx The current transaction
-     * @param op The current operation
-     * @param key The Kafka Connect key struct
+     *
+     * @param tx      The current transaction
+     * @param op      The current operation
+     * @param key     The Kafka Connect key struct
      * @param payload The Kafka Connect Payload struct
      * @return Status.OK for success, else any other status.
      */
     private Status processData(Tx tx, Op op, Struct key, Struct payload) {
         SourceRecord sr =
-                createPR.createSourceRecord(tx, op, kafkaProd.getKafkaProducer(), key, payload);
+            createPR.createSourceRecord(tx, op, kafkaProd.getKafkaProducer(), key, payload);
         return kafkaProd.send(sr);
     }
-   
+
     /**
      * Destroys the Kafka Producer and calls super methods for cleanup.
      */
@@ -343,7 +350,7 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
         kafkaProd.flush();
         kafkaProd.close();
     }
-    
+
     @Override
     public String reportStatus() {
         logger.debug("Invoked Confluent Kafka Handler method \"reportStatus\".");
@@ -359,18 +366,18 @@ public class KafkaConnectHandler extends NgFormattedOutputHandler {
         sb.append(", ddl operations=").append(handlerMetrics.getNumDdlOps());
         return sb.toString();
     }
-    
 
-    private void incrementCounters(Op op){
-        if(op.getOpType().isInsert()){
+
+    private void incrementCounters(Op op) {
+        if (op.getOpType().isInsert()) {
             handlerMetrics.incrementNumInserts();
-        }else if(op.getOpType().isPkUpdate()){
+        } else if (op.getOpType().isPkUpdate()) {
             handlerMetrics.incrementNumPkUpdates();
-        }else if(op.getOpType().isUpdate()){
+        } else if (op.getOpType().isUpdate()) {
             handlerMetrics.incrementNumUpdates();
-        }else if(op.getOpType().isDelete()){
+        } else if (op.getOpType().isDelete()) {
             handlerMetrics.incrementNumDeletes();
-        }else if(op.getOpType().isTruncate()){
+        } else if (op.getOpType().isTruncate()) {
             handlerMetrics.incrementNumTruncates();
         }
     }

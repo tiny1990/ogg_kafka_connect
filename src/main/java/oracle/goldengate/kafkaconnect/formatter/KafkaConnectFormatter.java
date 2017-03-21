@@ -1,10 +1,5 @@
 package oracle.goldengate.kafkaconnect.formatter;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import oracle.goldengate.datasource.DsColumn;
 import oracle.goldengate.datasource.DsConfiguration;
 import oracle.goldengate.datasource.DsEvent;
@@ -15,18 +10,22 @@ import oracle.goldengate.datasource.GGDataSource.Status;
 import oracle.goldengate.datasource.ObjectType;
 import oracle.goldengate.datasource.format.NgFormatter;
 import oracle.goldengate.datasource.format.NgUniqueTimestamp;
-import oracle.goldengate.datasource.meta.*;
+import oracle.goldengate.datasource.meta.ColumnMetaData;
+import oracle.goldengate.datasource.meta.DsMetaData;
+import oracle.goldengate.datasource.meta.TableMetaData;
+import oracle.goldengate.format.NgFormattedData;
+
+import org.apache.kafka.connect.data.Struct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static oracle.goldengate.datasource.meta.DsType.GGSubType.GG_SUBTYPE_FIXED_PREC;
 import static oracle.goldengate.datasource.meta.DsType.GGSubType.GG_SUBTYPE_FLOAT;
-
-import oracle.goldengate.format.NgFormattedData;
-
-
-import org.apache.kafka.connect.data.Struct;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This formatted formats operations into Kafka Connect row operation and returns the
