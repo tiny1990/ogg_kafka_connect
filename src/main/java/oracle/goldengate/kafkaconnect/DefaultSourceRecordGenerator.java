@@ -36,7 +36,7 @@ public class DefaultSourceRecordGenerator implements SourceRecordGenerator{
         //The topic name will default to the source fully qualified table name.
         //So schema.table for two part names and
         //catalog.schema.table for three part names.
-        final String topic = "dptask_"+".oracle."+ operation.getTableName().getOriginalName();
+        final String topic = "DP."+ operation.getTableName().getOriginalName();
         final Map<String, String> partition;
         final Map<String, Long> offset;
 
