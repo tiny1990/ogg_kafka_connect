@@ -129,9 +129,11 @@ public class KafkaConnectSchemaGenerator {
 
         //source
         SchemaBuilder source = SchemaBuilder.struct().name("source");
-        source.optional();
-        source.field("entry", Schema.STRING_SCHEMA);
-        source.field("size", Schema.INT32_SCHEMA);
+//        source.optional();
+        source.field("entity", Schema.STRING_SCHEMA);
+        source.field("size", Schema.OPTIONAL_INT32_SCHEMA);
+        source.field("islastone", Schema.OPTIONAL_BOOLEAN_SCHEMA);
+        source.field("isincrement", Schema.OPTIONAL_BOOLEAN_SCHEMA);
 
         builder.field("after", after.build());
         builder.field("before", before.build());

@@ -210,6 +210,9 @@ public class KafkaConnectFormatter implements NgFormatter {
                 key1 = new Struct(schemas.getKeySchema());
             }
             formatOperationMetadata(op.getOperationType(), op, tMeta, rec1);
+            Struct source = new Struct(rec1.schema().field("source").schema());
+            formatPayloadSource(op, tMeta, source);
+            rec1.put("source", source);
 
             if (op.getOperationType().isInsert()) {
                 //Insert is after values
@@ -268,6 +271,7 @@ public class KafkaConnectFormatter implements NgFormatter {
             throw e;
         }
     }
+
 
     @Override
     public void endTx(DsTransaction dt, DsMetaData dmd, NgFormattedData nfd) throws Exception {
@@ -384,6 +388,12 @@ public class KafkaConnectFormatter implements NgFormatter {
         formatPosition(op, rec);
         //formatPrimaryKeys(tMeta, rec);
         //formatTokens(op, rec);
+    }
+
+    private void formatPayloadSource(DsOperation op, TableMetaData tMeta, Struct rec) {
+        rec.put("entity", op.getTableName().getSchemaName());
+        rec.put("islastone", false);
+        rec.put("isincrement", true);
     }
 
     private void formatPrimaryKeys(TableMetaData tMeta, Struct rec) {
