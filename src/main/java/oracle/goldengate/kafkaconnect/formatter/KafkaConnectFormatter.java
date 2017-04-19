@@ -42,7 +42,6 @@ public class KafkaConnectFormatter implements NgFormatter {
     private String insertOpKey = "I";        // inserts
     private String updateOpKey = "U";        // updates
     private String deleteOpKey = "D";        // deletes
-
     //The action to take if the handler encounters a primary key update
     private PkHandling pkHandling = PkHandling.PK_ABEND;
     //Optional functionality to treat all values as strings
@@ -391,9 +390,11 @@ public class KafkaConnectFormatter implements NgFormatter {
     }
 
     private void formatPayloadSource(DsOperation op, TableMetaData tMeta, Struct rec) {
-        rec.put("entity", op.getTableName().getSchemaName());
+        rec.put("entity", op.getTableName().getShortName());
         rec.put("islastone", false);
         rec.put("isincrement", true);
+        rec.put("size", 0L);
+        rec.put("idx", 0L);
     }
 
     private void formatPrimaryKeys(TableMetaData tMeta, Struct rec) {
