@@ -14,6 +14,7 @@ import oracle.goldengate.datasource.meta.ColumnMetaData;
 import oracle.goldengate.datasource.meta.DsMetaData;
 import oracle.goldengate.datasource.meta.TableMetaData;
 import oracle.goldengate.format.NgFormattedData;
+import oracle.goldengate.kafkaconnect.DpConstants;
 
 import org.apache.kafka.connect.data.Struct;
 import org.slf4j.Logger;
@@ -390,11 +391,12 @@ public class KafkaConnectFormatter implements NgFormatter {
     }
 
     private void formatPayloadSource(DsOperation op, TableMetaData tMeta, Struct rec) {
-        rec.put("entity", op.getTableName().getShortName());
-        rec.put("islastone", false);
-        rec.put("isincrement", true);
-        rec.put("size", 0L);
-        rec.put("idx", 0L);
+        rec.put(DpConstants.RECORD_OFFSET_ENTITY_KEY, op.getTableName().getShortName());
+        rec.put(DpConstants.SNAPSHOT_LASTONE_KEY, false);
+        rec.put(DpConstants.RECORD_SOURCE_ISINCREMENT, true);
+        rec.put(DpConstants.RECORD_OFFSET_TOTAL_SIZE_KEY, 0L);
+        rec.put(DpConstants.RECORD_OFFSET_INDEX_KEY, 0L);
+        rec.put(DpConstants.DATA_KEY_BINLOG_TS, System.currentTimeMillis());
     }
 
     private void formatPrimaryKeys(TableMetaData tMeta, Struct rec) {

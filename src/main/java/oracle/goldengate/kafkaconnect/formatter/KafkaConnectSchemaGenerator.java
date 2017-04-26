@@ -11,6 +11,7 @@ import static oracle.goldengate.datasource.meta.DsType.GGSubType.GG_SUBTYPE_FIXE
 import static oracle.goldengate.datasource.meta.DsType.GGSubType.GG_SUBTYPE_FLOAT;
 
 import oracle.goldengate.datasource.meta.TableMetaData;
+import oracle.goldengate.kafkaconnect.DpConstants;
 
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
@@ -130,15 +131,16 @@ public class KafkaConnectSchemaGenerator {
         //source
         SchemaBuilder source = SchemaBuilder.struct().name("source");
 //        source.optional();
-        source.field("entity", Schema.STRING_SCHEMA);
-        source.field("size", Schema.INT64_SCHEMA);
-        source.field("islastone", Schema.BOOLEAN_SCHEMA);
-        source.field("isincrement", Schema.BOOLEAN_SCHEMA);
-        source.field("idx",Schema.OPTIONAL_INT64_SCHEMA);
+        source.field(DpConstants.RECORD_OFFSET_ENTITY_KEY, Schema.STRING_SCHEMA);
+        source.field(DpConstants.RECORD_OFFSET_TOTAL_SIZE_KEY, Schema.INT64_SCHEMA);
+        source.field(DpConstants.SNAPSHOT_LASTONE_KEY, Schema.BOOLEAN_SCHEMA);
+        source.field(DpConstants.RECORD_SOURCE_ISINCREMENT, Schema.BOOLEAN_SCHEMA);
+        source.field(DpConstants.RECORD_OFFSET_INDEX_KEY, Schema.OPTIONAL_INT64_SCHEMA);
+        source.field(DpConstants.DATA_KEY_BINLOG_TS, Schema.OPTIONAL_INT64_SCHEMA);
 
-        builder.field("after", after.build());
-        builder.field("before", before.build());
-        builder.field("source", source.build());
+        builder.field(DpConstants.DATA_KEY_AFTER, after.build());
+        builder.field(DpConstants.DATA_KEY_BEFORE, before.build());
+        builder.field(DpConstants.DATA_KEY_SOURCE, source.build());
         return builder.build();
     }
 
