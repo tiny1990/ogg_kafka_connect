@@ -1,97 +1,155 @@
-*****************************************************************************************************
-This software is distributed under COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) 
-Copy of this License can be obtained from https://oss.oracle.com/licenses/CDDL
-*****************************************************************************************************
-
-Oracle GoldenGate for Kafka Connect Handler
-Version 1.0
-
--------------
-Functionality
--------------
-
-The Kafka Connect Handler takes change data capture operations from a source trail file and generates data structs (org.apache.kafka.connect.data.Struct) as well as the associated schemas (org.apache.kafka.connect.data.Schema). The data structs are serialized via configured converters then enqueued onto Kafka topics. The topic name used corresponds to the fully qualified source table name as obtained from the GoldenGate trail file. Individual operations consist of inserts, updates, and delete operations executed on the source RDBMS. Insert and update operation data include the after change data. Delete operations include the before change data. A primary key update is a special case for an update where one or more of the primary key(s) is/are changed. The primary key update represents a special case in that without the before image data it is not possible to determine what row is actually changing when only in possession of the after change data. The default behavior of a primary key update is to ABEND in the Kafka Connect formatter. However, the formatter can be configured to simply treat these operations as regular updates or to treat them as deletes and then an insert which is the closest big data modeling to the substance of the transaction.
-
--------------------------------------------------------------
-Differences from Kafka Handler in Released GoldenGate Product
--------------------------------------------------------------
-
-The Kafka Handler officially released in Oracle GoldenGate for Big Data 12.2.0.1.0 is slightly different in functionality than the Kafka Connect Handler/Formatter included here. 
-The officially released Kafka Handler interfaces with pluggable formatters to output the data to Kafka in XML, JSON, Avro, or delimited text format.
-The Kafka Connect Handler/Formatter builds up Kafka Connect Schemas and Structs.  It relies on the Kafka Connect framework to perform the serialization using the Kafka Connect converters before putting the data to topic.
-
-------------------
-Supported Versions
-------------------
-
-The Oracle GoldenGate Kafka Connect Handler/Formatter is coded and tested with the following product versions.
-
-- Oracle GoldenGate for Big Data 12.2.0.1.1
-- Confluent IO Kafka/Kafka Connect 0.9.0.1-cp1
-
-Porting may be required for Oracle GoldenGate Kafka Connect Handler/Formatter to work with other versions of Oracle GoldenGate for Big Data and/or Confluent IO Kafka/Kafka Connect
-
--------------
-Documentation
--------------
-
-Documentation on how to configure and use the Kafka Connect Handler/Formatter is available in the
-OGG_Kafka_Connect.pdf file.
+# goldengate in datapipelineInc
 
 
-------------
-Installation
-------------
+## 配置goldengate
+### [Prepare] 开启归档模式
+```
+sqlplus / as sysdba
+ALTER DATABASE ADD SUPPLEMENTAL LOG DATA;
+ALTER DATABASE FORCE LOGGING;
+SHUTDOWN IMMEDIATE
+STARTUP MOUNT
+ALTER DATABASE ARCHIVELOG;
+ALTER DATABASE OPEN;
+ALTER SYSTEM SWITCH LOGFILE;
+ALTER SYSTEM SET ENABLE_GOLDENGATE_REPLICATION=TRUE SCOPE=BOTH;
+EXIT
+```
+### 启动manager1
+./ggsci
+```
+EDIT PARAM MGR
+DynamicPortList 20000-20099
+PurgeOldExtracts ./dirdat/*, UseCheckPoints, MinKeepHours 2
+Autostart Extract E*
+AUTORESTART Extract *, WaitMinutes 1, Retries 3
+```
+start mgr
+### 启动manager ogg-bd
+```
+EDIT PARAM MGR
+PORT 7810
+```
+start mgr
 
-The Oracle GoldenGate Kafka Connect Handler/Formatter should be extracted from its tar file into an empty directory.  The user then can use the sample conf.prm (replicat properties file) and the sample conf.props (Java Adapter Properties file) as a starting point for configuration.
-Users need to modify the gg.classpath configuration in the Java Adapter Properties file so that the Kafka Connect Handler/Formatter is loadable at runtime by the JVM.  Also the Kafka
-and Kafka Connect dependencies need to be resolved.  See Run Time Dependencies below.
+## 配置Extract
+### set up the schema logging
+```
+DBLOGIN USERID SYSTEM@localhost:1521/orcl PASSWORD welcome1
+ADD SCHEMATRANDATA SOE ALLCOLS
+```
+
+### register the integrated Extract process
+```
+DBLOGIN USERID SYSTEM PASSWORD welcome1
+REGISTER EXTRACT EXT1 DATABASE  CONTAINER (ORCL)  (如果不是cdb) REGISTER EXTRACT EXT1 DATABASE
+```
+### define and add the extract
+```
+ADD SCHEMATRANDATA ORCL.SOE
+ADD EXTRACT EXT1, INTEGRATED TRANLOG, BEGIN NOW
+ADD EXTTRAIL ./dirdat/lt EXTRACT EXT1
+```
+### EDIT PARAM EXT1 AND START
+```
+EXTRACT EXT1
+USERID SYSTEM, PASSWORD welcome1
+EXTTRAIL ./dirdat/lt
+SOURCECATALOG ORCL
+TABLE SOE.*;
+```
+START EXT1
+
+###   EDIT PARAM EXTDP1 AND START
+```
+ADD EXTRACT EXTDP1 EXTTRAILSOURCE ./dirdat/lt BEGIN NOW
+ADD RMTTRAIL ./dirdat/rt EXTRACT EXTDP1
+```
+
+## 配置ogg-bd
+### 配置 Replica (/u01/ogg-bd/dirprm/rconf.prm)
+```
+REPLICAT rconf
+TARGETDB LIBFILE libggjava.so SET property=dirprm/conf.props
+REPORTCOUNT EVERY 1 MINUTES, RATE
+GROUPTRANSOPS 1000
+MAP *.*.*, TARGET *.*.*;  (cdp 和 普通数据库配置不同)
+```
+### 配置Handler (/u01/ogg-bd/dirprm/conf.props)
+```
+gg.handlerlist=confluent
 
 
----------------------
-Run Time Dependencies
----------------------
-
-Depends on GoldenGate Java Adapter and Big Data jars.  This is typically located at the following:
-{GoldenGate Home Directory}/ggjava/ggjava.jar  The ggjava.jar needs to be included in the JVM bootstrap
-classpath.
-
-The following need to be in the gg.classpath in the Java Properties file.
-
-The OGG Kafka Connect Adapter/Formatter jar.  This needs to be included in the gg.classpath properties.
-ogg-kafka-connect-1.0.jar
-
-The directory containing the Kafka Producer Configuration File.  The name of this file is configured
-in the Java Adapter Properties file but the path (without trailing wildcard) must be included in the 
-gg.classpath so that the file can be accessed and read at runtime.
-
-Depends on Kafka 0.9.0.1-cp1 Kafka Client jars, Kafka Connect jars, and Kafka Connect JSON jars:
-
-activation-1.1.jar
-connect-api-0.9.0.1-cp1.jar
-connect-json-0.9.0.1-cp1.jar
-generated-sources
-jackson-annotations-2.5.0.jar
-jackson-core-2.5.4.jar
-jackson-databind-2.5.4.jar
-jline-0.9.94.jar
-jopt-simple-3.2.jar
-junit-3.8.1.jar
-kafka_2.11-0.9.0.1-cp1.jar
-kafka-clients-0.9.0.1-cp1.jar
-log4j-1.2.15.jar
-lz4-1.2.0.jar
-mail-1.4.jar
-metrics-core-2.2.0.jar
-netty-3.7.0.Final.jar
-scala-library-2.11.7.jar
-scala-parser-combinators_2.11-1.0.4.jar
-scala-xml_2.11-1.0.4.jar
-slf4j-api-1.7.6.jar
-slf4j-log4j12-1.7.6.jar
-snappy-java-1.1.1.7.jar
-zkclient-0.7.jar
-zookeeper-3.4.6.jar
+#The handler properties
+gg.handler.confluent.type=oracle.goldengate.kafkaconnect.KafkaConnectHandler
+gg.handler.confluent.kafkaProducerConfigFile=confluent.properties
+gg.handler.confluent.mode=tx
+gg.handler.confluent.sourceRecordGeneratorClass=oracle.goldengate.kafkaconnect.DefaultSourceRecordGenerator
 
 
+#The formatter properties
+gg.handler.confluent.format=oracle.goldengate.kafkaconnect.formatter.KafkaConnectFormatter
+gg.handler.confluent.format.insertOpKey=I
+gg.handler.confluent.format.updateOpKey=U
+gg.handler.confluent.format.deleteOpKey=D
+gg.handler.confluent.format.treatAllColumnsAsStrings=false
+gg.handler.confluent.format.iso8601Format=false
+gg.handler.confluent.format.pkUpdateHandling=abend
 
+
+goldengate.userexit.timestamp=utc
+goldengate.userexit.writers=javawriter
+javawriter.stats.display=TRUE
+javawriter.stats.full=TRUE
+
+
+gg.log=log4j
+gg.log.level=INFO
+
+
+gg.report.time=30sec
+
+
+#Set the classpath here
+gg.classpath=dirprm/:/u01/ogg-bd/ggjava/resources/lib*:/usr/share/java/kafka-connect-hdfs/*:/usr/share/java/kafka/*
+
+
+javawriter.bootoptions=-Xmx512m -Xms32m -Djava.class.path=.:ggjava/ggjava.jar:./dirprm
+```
+
+### 配置 Kafka Connect  (/u01/ogg-bd/dirprm/confluent.properties)
+```
+bootstrap.servers=localhost:9092
+
+value.serializer=org.apache.kafka.common.serialization.ByteArraySerializer
+key.serializer=org.apache.kafka.common.serialization.ByteArraySerializer
+schema.registry.url=http://localhost:18081
+
+value.converter=org.apache.kafka.connect.json.JsonConverter
+key.converter=org.apache.kafka.connect.json.JsonConverter
+internal.value.converter=org.apache.kafka.connect.json.JsonConverter
+internal.key.converter=org.apache.kafka.connect.json.JsonConverter
+```
+
+### 启动ggsci (./ggsci)
+```
+ADD REPLICAT RCONF, EXTTRAIL ./dirdat/rt
+START RCONF
+```
+
+
+## TypeMapping
+> 需要做好两端之间的类型完全匹配(ogg-bd <-> dp-data-system)
+> 目前数据类型全部匹配 (自己手建表),需要完全类型验证，并记录类型转换表
+
+
+
+## Troubleshooting
+* Windows 配置提示jvm.dll LOAD ERROR
+> 配置JAVA PATH,LD_LIBRARY_PATH=XX\jdk1.8.0_121\jre\bin;XX\jdk1.8.0_121\jre\bin\server\jvm.dll
+
+* 插入数据后，kafka中没有数据
+> 检查ogg/dirdat 看最近更新事件，如果没有变化，证明ext1 出现异常，如果ogg-bd数据没有更新 检查extdp1是否出现问题
+
+* 能请求到 ogg-bd Kafka Connect 的8083 端口吗？
+> 暂时没有找到方案，可能是配置式不对
