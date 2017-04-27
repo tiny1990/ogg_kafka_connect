@@ -1,5 +1,7 @@
 package oracle.goldengate.kafkaconnect.formatter;
 
+import com.sun.org.apache.xpath.internal.operations.Bool;
+
 import oracle.goldengate.datasource.DsColumn;
 import oracle.goldengate.datasource.DsConfiguration;
 import oracle.goldengate.datasource.DsEvent;
@@ -16,10 +18,12 @@ import oracle.goldengate.datasource.meta.TableMetaData;
 import oracle.goldengate.format.NgFormattedData;
 import oracle.goldengate.kafkaconnect.DpConstants;
 
+import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -468,56 +472,30 @@ public class KafkaConnectFormatter implements NgFormatter {
             //User has selected to treat all columns as strings
             rec.put(fieldName, col.getValue());
         } else {
-            switch (cMeta.getDataType().getGGDataType()) {
-
-                //First handle numbers
-                case GG_16BIT_S:
-                case GG_16BIT_U:
-                case GG_32BIT_S:
-                case GG_32BIT_U:
-                case GG_64BIT_S:
-                    if (cMeta.getDataType().getScale() > 0) {
-                        colValue = Double.valueOf(col.getValue());
-                    } else {
-                        colValue = Long.valueOf(col.getValue());
-                    }
+            switch (cMeta.getDataType().getJDBCType()) {
+                case Types.NUMERIC:
+                    colValue = Double.parseDouble(col.getValue());
                     break;
-                case GG_64BIT_U:
-                    colValue = Double.valueOf(col.getValue());
+                case Types.BIT:
+                case Types.TINYINT:
+                case Types.SMALLINT:
+                case Types.INTEGER:
+                    colValue = Integer.parseInt(col.getValue());
                     break;
-                case GG_REAL:
-                case GG_IEEE_REAL:
-                    colValue = Float.valueOf(col.getValue());
+                case Types.BIGINT:
+                    colValue = Long.parseLong(col.getValue());
                     break;
-
-                case GG_DOUBLE:
-                case GG_IEEE_DOUBLE:
-                case GG_DOUBLE_V:
-                case GG_DOUBLE_F:
-                case GG_DEC_U:
-                case GG_DEC_LSS:
-                case GG_DEC_LSE:
-                case GG_DEC_TSS:
-                case GG_DEC_TSE:
-                case GG_DEC_PACKED:
-                    colValue = Double.valueOf(col.getValue());
+                case Types.FLOAT:
+                case Types.REAL:
+                    colValue = Float.parseFloat(col.getValue());
                     break;
-                case GG_ASCII_V:
-                case GG_ASCII_F:
-                    // Even though it's coming to us as character data, we need to
-                    // inspect the sub-type to see whether it is a number type.  If
-                    // this is a number type, we'll use Double.
-                    if (cMeta.getDataType().getGGDataSubType() == GG_SUBTYPE_FLOAT ||
-                        cMeta.getDataType().getGGDataSubType() == GG_SUBTYPE_FIXED_PREC) {
-                        // This is a number data, let's use Double for consistency.
-                        colValue = Double.valueOf(col.getValue());
-                    } else {
-                        colValue = col.getValue();
-                    }
+                case Types.DOUBLE:
+                    colValue = Double.parseDouble(col.getValue());
                     break;
-
+                case Types.BOOLEAN:
+                    colValue = Boolean.valueOf(col.getValue());
+                    break;
                 default:
-                    //Treat it as a string
                     colValue = col.getValue();
             }
             rec.put(fieldName, colValue);

@@ -1,15 +1,7 @@
 package oracle.goldengate.kafkaconnect.formatter;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import oracle.goldengate.datasource.meta.ColumnMetaData;
 import oracle.goldengate.datasource.meta.DsType;
-
-import static oracle.goldengate.datasource.meta.DsType.GGSubType.GG_SUBTYPE_FIXED_PREC;
-import static oracle.goldengate.datasource.meta.DsType.GGSubType.GG_SUBTYPE_FLOAT;
-
 import oracle.goldengate.datasource.meta.TableMetaData;
 import oracle.goldengate.kafkaconnect.DpConstants;
 
@@ -18,6 +10,11 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.sql.Types;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * This class generates the Kafka Connect schema and caches the schemas for
@@ -151,57 +148,41 @@ public class KafkaConnectSchemaGenerator {
             //Treat it as a string
             builder.field(fieldName, Schema.OPTIONAL_STRING_SCHEMA);
         } else {
-
             DsType.GGType colType = cmeta.getDataType().getGGDataType();
             //Variables are always optional
             //if (metadata.getColumnMetaData(col).isNullable()) {
             //Per Lego this always returns true.
             //    optional = true;
             //}
-            switch (colType) {
+
+            int type = cmeta.getDataType().getJDBCType();
+            int scale = cmeta.getDataType().getScale();
+            long precision = cmeta.getDataType().getPrecision();
+            System.out.println(cmeta.getColumnName() + " " + type + " " + precision + " " + scale);
+            switch (type) {
                 // Things that fit in signed short
-                case GG_16BIT_S:
-                case GG_16BIT_U:
-                case GG_32BIT_S:
-                case GG_32BIT_U:
-                case GG_64BIT_S:
-                    if (cmeta.getDataType().getScale() > 0) {
-                        builder.field(fieldName, Schema.OPTIONAL_FLOAT64_SCHEMA);
-                    } else {
-                        builder.field(fieldName, Schema.OPTIONAL_INT64_SCHEMA);
-                    }
-                    break;
-                case GG_64BIT_U:
+                case Types.NUMERIC:
                     builder.field(fieldName, Schema.OPTIONAL_FLOAT64_SCHEMA);
                     break;
-                // REAL is a single precision floating point value, i.e. a Java float
-                case GG_REAL:
-                case GG_IEEE_REAL:
+                case Types.BIT:
+                case Types.TINYINT:
+                case Types.SMALLINT:
+                case Types.INTEGER:
+                    builder.field(fieldName, Schema.OPTIONAL_INT32_SCHEMA);
+                    break;
+                case Types.BIGINT:
+                    builder.field(fieldName, Schema.OPTIONAL_INT64_SCHEMA);
+                    break;
+                case Types.FLOAT:
+                case Types.REAL:
                     builder.field(fieldName, Schema.OPTIONAL_FLOAT32_SCHEMA);
                     break;
-                case GG_DOUBLE:
-                case GG_IEEE_DOUBLE:
-                case GG_DOUBLE_V:
-                case GG_DOUBLE_F:
-                case GG_DEC_U:
-                case GG_DEC_LSS:
-                case GG_DEC_LSE:
-                case GG_DEC_TSS:
-                case GG_DEC_TSE:
-                case GG_DEC_PACKED:
+                case Types.DOUBLE:
                     builder.field(fieldName, Schema.OPTIONAL_FLOAT64_SCHEMA);
                     break;
-                case GG_ASCII_V:
-                case GG_ASCII_F:
-                    if (cmeta.getDataType().getGGDataSubType() == GG_SUBTYPE_FLOAT ||
-                        cmeta.getDataType().getGGDataSubType() == GG_SUBTYPE_FIXED_PREC) {
-                        // This is a number data, let's use Double for consistency.
-                        builder.field(fieldName, Schema.OPTIONAL_FLOAT64_SCHEMA);
-                    } else {
-                        builder.field(fieldName, Schema.OPTIONAL_STRING_SCHEMA);
-                    }
+                case Types.BOOLEAN:
+                    builder.field(fieldName, Schema.OPTIONAL_BOOLEAN_SCHEMA);
                     break;
-                // Default to strings for everything else
                 default:
                     builder.field(fieldName, Schema.OPTIONAL_STRING_SCHEMA);
             }
