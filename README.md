@@ -94,7 +94,7 @@ gg.handler.confluent.format.updateOpKey=U
 gg.handler.confluent.format.deleteOpKey=D
 gg.handler.confluent.format.treatAllColumnsAsStrings=false
 gg.handler.confluent.format.iso8601Format=false
-gg.handler.confluent.format.pkUpdateHandling=abend
+gg.handler.confluent.format.pkUpdateHandling=update // delete-insert
 
 
 goldengate.userexit.timestamp=utc
