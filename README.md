@@ -153,3 +153,7 @@ START RCONF
 
 * 能请求到 ogg-bd Kafka Connect 的8083 端口吗？
 > 暂时没有找到方案，可能是配置式不对
+
+* After 中只有update的column，没有全部column数据
+> https://docs.oracle.com/goldengate/gg121211/gg-adapter/GADAD/java_msgcap_parsing.htm#GADAD141
+> 在ext1.prm 中添加 NOCOMPRESSUPDATES   GETUPDATEBEFORES
