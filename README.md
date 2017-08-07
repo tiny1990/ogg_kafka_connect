@@ -33,6 +33,7 @@ PORT 7810
 start mgr
 
 ## 配置Extract
+./ggsci
 ### set up the schema logging
 ```
 DBLOGIN USERID SYSTEM@localhost:1521/orcl PASSWORD welcome1
@@ -51,6 +52,7 @@ ADD EXTRACT EXT1, INTEGRATED TRANLOG, BEGIN NOW
 ADD EXTTRAIL ./dirdat/lt EXTRACT EXT1
 ```
 ### EDIT PARAM EXT1 AND START
+EDIT PARAM EXT1 
 ```
 EXTRACT EXT1
 USERID SYSTEM, PASSWORD welcome1
@@ -61,19 +63,21 @@ TABLE SOE.*;
 START EXT1
 
 ###   EDIT PARAM EXTDP1 AND START
+EDIT PARAM EXTDP1
 ```
 EXTRACT EXTDP1
 RMTHOST LOCALHOST, MGRPORT 7810
 USERID SYSTEM, PASSWORD welcome1
 RMTTRAIL ./dirdat/rt
 TABLE SOE.*;
+if (oracle 11) RMTTRAIL ./dirdat/rt, FORMAT RELEASE 11.2
 ```
-oracle 11 ```RMTTRAIL ./dirdat/rt, FORMAT RELEASE 11.2```
 
 ```
 ADD EXTRACT EXTDP1 EXTTRAILSOURCE ./dirdat/lt BEGIN NOW
 ADD RMTTRAIL ./dirdat/rt EXTRACT EXTDP1
 ```
+START EXTDP1
 
 ## 配置ogg-bd
 ### 配置 Replica (/u01/ogg-bd/dirprm/rconf.prm)
