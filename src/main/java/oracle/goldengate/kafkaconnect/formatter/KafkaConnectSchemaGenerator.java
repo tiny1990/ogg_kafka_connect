@@ -4,13 +4,16 @@ import oracle.goldengate.datasource.meta.ColumnMetaData;
 import oracle.goldengate.datasource.meta.DsType;
 import oracle.goldengate.datasource.meta.TableMetaData;
 import oracle.goldengate.kafkaconnect.DpConstants;
+import oracle.jdbc.OracleType;
 
+import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.SQLException;
 import java.sql.Types;
 import java.util.HashMap;
 import java.util.List;
@@ -148,45 +151,109 @@ public class KafkaConnectSchemaGenerator {
             //Treat it as a string
             builder.field(fieldName, Schema.OPTIONAL_STRING_SCHEMA);
         } else {
-            DsType.GGType colType = cmeta.getDataType().getGGDataType();
-            //Variables are always optional
-            //if (metadata.getColumnMetaData(col).isNullable()) {
-            //Per Lego this always returns true.
-            //    optional = true;
-            //}
-
             int type = cmeta.getDataType().getJDBCType();
-            int scale = cmeta.getDataType().getScale();
+
+            long displaySize = cmeta.getBinaryLength();
+            int scale = cmeta.getDataType().getScale() == -127 ? 127 : cmeta.getDataType().getScale();
             long precision = cmeta.getDataType().getPrecision();
-            System.out.println(cmeta.getColumnName() + " " + type + " " + precision + " " + scale);
-            switch (type) {
-                // Things that fit in signed short
-                case Types.NUMERIC:
-                    builder.field(fieldName, Schema.OPTIONAL_FLOAT64_SCHEMA);
+            System.out.println(cmeta.getColumnName() + " " + type + " " + cmeta.getDataType().toString() + " " + precision + " " + scale + " " + displaySize);
+
+
+            Schema schema;
+            switch (cmeta.getDataType().toString()) {
+                case "TIMESTAMP":
+                    schema = SchemaBuilder.type(Schema.Type.STRING).optional()
+                        .parameter(DpConstants.DATA_LENGTH, "26")
+                        .name(DpConstants.DATETIME_SCHEMA_NAME)
+                        .build();
                     break;
-                case Types.BIT:
-                case Types.TINYINT:
-                case Types.SMALLINT:
-                case Types.INTEGER:
-                    builder.field(fieldName, Schema.OPTIONAL_INT32_SCHEMA);
+                case "VARCHAR":
+                    schema = SchemaBuilder.type(Schema.Type.STRING).optional()
+                        .parameter(DpConstants.DATA_LENGTH, displaySize + "")
+                        .name("VARCHAR")
+                        .build();
                     break;
-                case Types.BIGINT:
-                    builder.field(fieldName, Schema.OPTIONAL_INT64_SCHEMA);
+                case "DOUBLE":
                     break;
-                case Types.FLOAT:
-                case Types.REAL:
-                    builder.field(fieldName, Schema.OPTIONAL_FLOAT32_SCHEMA);
-                    break;
-                case Types.DOUBLE:
-                    builder.field(fieldName, Schema.OPTIONAL_FLOAT64_SCHEMA);
-                    break;
-                case Types.BOOLEAN:
-                    builder.field(fieldName, Schema.OPTIONAL_BOOLEAN_SCHEMA);
-                    break;
+
+
+
                 default:
-                    builder.field(fieldName, Schema.OPTIONAL_STRING_SCHEMA);
+                    schema = SchemaBuilder.type(Schema.Type.STRING).optional().build();
             }
+//                case FLOAT:
+//                case BINARY_FLOAT:
+//                    schema = SchemaBuilder.type(Schema.Type.FLOAT32).optional()
+//                        .build();
+//                    break;
+//                case BINARY_DOUBLE:
+//                    schema = SchemaBuilder.type(Schema.Type.FLOAT64).optional()
+//                        .build();
+//                    break;
+//                case NUMBER:
+//                    schema = Decimal.builder(scale)
+//                        .parameter(DpConstants.DATA_LENGTH, precision + "")
+//                        .optional().build();
+//                    break;
+//                case INTERVAL_YEAR_TO_MONTH:
+//                case INTERVAL_DAY_TO_SECOND:
+//                    schema = SchemaBuilder.type(Schema.Type.STRING).optional()
+//                        .parameter(DpConstants.DATA_LENGTH, "26")
+//                        .build();
+//                    break;
+//                case CLOB:
+//                case NCLOB:
+//                case BLOB:
+//                case BFILE:
+//                    schema = SchemaBuilder.type(Schema.Type.BYTES).optional()
+//                        .build();
+//                    break;
+//                case VARCHAR2:
+//                case NVARCHAR:
+//                case CHAR:
+//                case NCHAR:
+//                case LONG:
+//                    schema = SchemaBuilder.type(Schema.Type.STRING).optional()
+//                        .parameter(DpConstants.DATA_LENGTH, displaySize + "")
+//                        .build();
+//                    break;
+//                case ANYTYPE:
+//                case OBJECT:
+//                case RAW:
+//                case LONG_RAW:
+//                case ROWID:
+//                case UROWID:
+//                case REF:
+//                case PLSQL_BOOLEAN:
+//                case VARRAY:
+//                case NESTED_TABLE:
+//                case ANYDATA:
+//                case ANYDATASET:
+//                case XMLTYPE:
+//                case HTTPURITYPE:
+//                case XDBURITYPE:
+//                case DBURITYPE:
+//                case SDO_GEOMETRY:
+//                case SDO_TOPO_GEOMETRY:
+//                case SDO_GEORASTER:
+//                case ORDAUDIO:
+//                case ORDDICOM:
+//                case ORDDOC:
+//                case ORDIMAGE:
+//                case ORDVIDEO:
+//                case SI_AVERAGE_COLOR:
+//                case SI_COLOR:
+//                case SI_COLOR_HISTOGRAM:
+//                case SI_FEATURE_LIST:
+//                case SI_POSITIONAL_COLOR:
+//                case SI_STILL_IMAGE:
+//                case SI_TEXTURE:
+
+//
+            builder.field(fieldName, schema);
+
         }
+
     }
 
     /**
@@ -194,6 +261,7 @@ public class KafkaConnectSchemaGenerator {
      *
      * @param s The schema to be logged.
      */
+
     private void logSchema(Schema s) {
         if ((logger.isDebugEnabled()) && (s != null)) {
             StringBuilder sb = new StringBuilder();

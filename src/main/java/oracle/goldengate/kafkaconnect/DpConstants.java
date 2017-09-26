@@ -14,4 +14,9 @@ public class DpConstants {
     public static final String RECORD_OFFSET_INDEX_KEY = "idx";
 
     public static final String SNAPSHOT_LASTONE_KEY = "islastone";
+
+    public static final String DATA_LENGTH = "length";
+    public static final String DATETIME_SCHEMA_NAME = "com.datapipeline.schema.Datetime";
+
+
 }

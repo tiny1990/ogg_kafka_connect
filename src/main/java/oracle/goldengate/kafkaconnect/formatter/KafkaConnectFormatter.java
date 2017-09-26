@@ -1,7 +1,5 @@
 package oracle.goldengate.kafkaconnect.formatter;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
-
 import oracle.goldengate.datasource.DsColumn;
 import oracle.goldengate.datasource.DsConfiguration;
 import oracle.goldengate.datasource.DsEvent;
@@ -17,20 +15,22 @@ import oracle.goldengate.datasource.meta.DsMetaData;
 import oracle.goldengate.datasource.meta.TableMetaData;
 import oracle.goldengate.format.NgFormattedData;
 import oracle.goldengate.kafkaconnect.DpConstants;
+import oracle.sql.TIMESTAMP;
 
-import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.DateTimeFormatterBuilder;
+import org.joda.time.format.DateTimeParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Types;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static oracle.goldengate.datasource.meta.DsType.GGSubType.GG_SUBTYPE_FIXED_PREC;
-import static oracle.goldengate.datasource.meta.DsType.GGSubType.GG_SUBTYPE_FLOAT;
 
 /**
  * This formatted formats operations into Kafka Connect row operation and returns the
@@ -55,6 +55,7 @@ public class KafkaConnectFormatter implements NgFormatter {
     private boolean versionAvroSchemas = false;
     //Use ISO8601 format for current timestamp
     private boolean useIso8601Format = true;
+
 
     /**
      * Method to set the insert operation key.  This key will be included in the
@@ -464,39 +465,51 @@ public class KafkaConnectFormatter implements NgFormatter {
         rec.put("tokens", tokenMap);
     }
 
+
+    private static final DateTimeParser[] parsers = {
+        DateTimeFormat.forPattern("yyyy-MM-dd:HH:mm:ss.SSSSSS Z").getParser(),
+        DateTimeFormat.forPattern("yyyy-MM-dd:HH:mm:ss.SSSSSS").getParser(),// TimeStamp - for some reason the format is a bit different from the GG doc and JDBC standard
+        DateTimeFormat.forPattern("yyyy-MM-dd:HH:mm:ss").getParser()
+    };
+
+    private static final DateTimeFormatter formatter = new DateTimeFormatterBuilder().append(null, parsers).toFormatter();
+
     protected void formatColumnValue(ColumnMetaData cMeta, DsColumn col, Struct rec) {
         String fieldName = cMeta.getOriginalColumnName();
-        final Object colValue;
+
 
         if (treatAllColumnsAsStrings) {
             //User has selected to treat all columns as strings
             rec.put(fieldName, col.getValue());
         } else {
-            switch (cMeta.getDataType().getJDBCType()) {
-                case Types.NUMERIC:
-                    colValue = Double.parseDouble(col.getValue());
-                    break;
-                case Types.BIT:
-                case Types.TINYINT:
-                case Types.SMALLINT:
-                case Types.INTEGER:
-                    colValue = Integer.parseInt(col.getValue());
-                    break;
-                case Types.BIGINT:
-                    colValue = Long.parseLong(col.getValue());
-                    break;
-                case Types.FLOAT:
-                case Types.REAL:
-                    colValue = Float.parseFloat(col.getValue());
-                    break;
-                case Types.DOUBLE:
-                    colValue = Double.parseDouble(col.getValue());
-                    break;
-                case Types.BOOLEAN:
-                    colValue = Boolean.valueOf(col.getValue());
-                    break;
-                default:
-                    colValue = col.getValue();
+            String colValue = null;
+            try {
+                switch (cMeta.getDataType().toString()) {
+                    case "TIMESTAMP":
+                        try {
+                            colValue = new TIMESTAMP(col.getValue()).toString().substring(0, 19);
+                        } catch (Exception e) {
+                            String value = col.getValue();
+                            if (value.length() > 26) {
+                                value = value.substring(0,26);
+                            }
+                            System.out.println(value);
+                            DateTime time = formatter.parseDateTime(value);
+                            if (time != null) {
+                                colValue = new Timestamp(time.getMillis()).toString().substring(0, 19);
+                            } else {
+                                logger.warn("Timestamp value {} couldn't be parsed into a valid TimeStamp");
+                            }
+                        }
+                        break;
+                    case "VARCHAR":
+
+
+                    default:
+                        colValue = col.toString();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
             rec.put(fieldName, colValue);
         }
