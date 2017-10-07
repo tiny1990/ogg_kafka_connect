@@ -156,9 +156,6 @@ public class KafkaConnectSchemaGenerator {
             //}
 
             int type = cmeta.getDataType().getJDBCType();
-            int scale = cmeta.getDataType().getScale();
-            long precision = cmeta.getDataType().getPrecision();
-            System.out.println(cmeta.getColumnName() + " " + type + " " + precision + " " + scale);
             switch (type) {
                 // Things that fit in signed short
                 case Types.NUMERIC:
