@@ -1,7 +1,5 @@
 package oracle.goldengate.kafkaconnect.formatter;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
-
 import oracle.goldengate.datasource.DsColumn;
 import oracle.goldengate.datasource.DsConfiguration;
 import oracle.goldengate.datasource.DsEvent;
@@ -18,7 +16,6 @@ import oracle.goldengate.datasource.meta.TableMetaData;
 import oracle.goldengate.format.NgFormattedData;
 import oracle.goldengate.kafkaconnect.DpConstants;
 
-import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,9 +25,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static oracle.goldengate.datasource.meta.DsType.GGSubType.GG_SUBTYPE_FIXED_PREC;
-import static oracle.goldengate.datasource.meta.DsType.GGSubType.GG_SUBTYPE_FLOAT;
 
 /**
  * This formatted formats operations into Kafka Connect row operation and returns the
