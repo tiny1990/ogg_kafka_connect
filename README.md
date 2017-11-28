@@ -128,7 +128,7 @@ gg.report.time=30sec
 
 
 #Set the classpath here
-gg.classpath=dirprm/:/u01/ogg-bd/ggjava/resources/lib*:/usr/share/java/kafka-connect-hdfs/*:/usr/share/java/kafka/*
+gg.classpath=dirprm/:/u01/ogg-bd/ggjava/resources/lib*:/u01/ogg-bd/confluent-lib
 
 
 javawriter.bootoptions=-Xmx512m -Xms32m -Djava.class.path=.:ggjava/ggjava.jar:./dirprm
