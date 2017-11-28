@@ -157,7 +157,11 @@ internal.key.converter=org.apache.kafka.connect.json.JsonConverter
 ADD REPLICAT RCONF, EXTTRAIL ./dirdat/rt
 START RCONF
 ```
-
+### how to build
+```
+# mvn clean install
+# mv target/confluent-lib to ogg_bd
+```
 
 ## TypeMapping
 > 需要做好两端之间的类型完全匹配(ogg-bd <-> dp-data-system)
