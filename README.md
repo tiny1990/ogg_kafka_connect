@@ -140,7 +140,11 @@ bootstrap.servers=localhost:9092
 
 value.serializer=org.apache.kafka.common.serialization.ByteArraySerializer
 key.serializer=org.apache.kafka.common.serialization.ByteArraySerializer
+
 schema.registry.url=http://localhost:18081
+
+key.converter.schema.registry.url=http://localhost:18081
+value.converter.schema.registry.url=http://localhost:18081
 
 value.converter=io.confluent.connect.avro.AvroConverter
 key.converter=io.confluent.connect.avro.AvroConverter
