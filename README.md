@@ -142,8 +142,8 @@ value.serializer=org.apache.kafka.common.serialization.ByteArraySerializer
 key.serializer=org.apache.kafka.common.serialization.ByteArraySerializer
 schema.registry.url=http://localhost:18081
 
-value.converter=org.apache.kafka.connect.json.JsonConverter
-key.converter=org.apache.kafka.connect.json.JsonConverter
+value.converter=io.confluent.connect.avro.AvroConverter
+key.converter=io.confluent.connect.avro.AvroConverter
 internal.value.converter=org.apache.kafka.connect.json.JsonConverter
 internal.key.converter=org.apache.kafka.connect.json.JsonConverter
 ```
