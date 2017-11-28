@@ -72,7 +72,9 @@ RMTHOST LOCALHOST, MGRPORT 7810
 USERID SYSTEM, PASSWORD welcome1 暂时不添加
 RMTTRAIL ./dirdat/rt
 TABLE SOE.*;
-if (oracle 11) RMTTRAIL ./dirdat/rt, FORMAT RELEASE 11.2
+--如果有版本问题，尝试一下解决方案
+RMTTRAIL ./dirdat/rt, FORMAT RELEASE 11.2
+RMTTRAIL ./dirdat/rt, FORMAT LEVEL 5    //ogg-01332
 ```
 
 ```
