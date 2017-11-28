@@ -186,4 +186,4 @@ START RCONF
 > 在ext1.prm 中添加 NOCOMPRESSUPDATES   GETUPDATEBEFORES
 
 * for big data 找不到dll / so
-> 创建GLOBALS 添加 ENABLEMONITORAGENT， 重启mgr
+> 创建GLOBALS 添加 ENABLEMONITORAGENT， 重启mgr 注意要在一个 ssh会话下使用
