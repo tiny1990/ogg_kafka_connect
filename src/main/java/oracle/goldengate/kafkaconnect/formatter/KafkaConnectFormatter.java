@@ -20,6 +20,7 @@ import org.apache.kafka.connect.data.Struct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -468,7 +469,9 @@ public class KafkaConnectFormatter implements NgFormatter {
         } else {
             switch (cMeta.getDataType().getJDBCType()) {
                 case Types.NUMERIC:
-                    colValue = Double.parseDouble(col.getValue());
+                case Types.DOUBLE:
+                    BigDecimal bg = new BigDecimal(Double.valueOf(col.getValue()));
+                    colValue = bg.setScale(16, BigDecimal.ROUND_HALF_UP).doubleValue();
                     break;
                 case Types.BIT:
                 case Types.TINYINT:
@@ -482,9 +485,6 @@ public class KafkaConnectFormatter implements NgFormatter {
                 case Types.FLOAT:
                 case Types.REAL:
                     colValue = Float.parseFloat(col.getValue());
-                    break;
-                case Types.DOUBLE:
-                    colValue = Double.parseDouble(col.getValue());
                     break;
                 case Types.BOOLEAN:
                     colValue = Boolean.valueOf(col.getValue());
